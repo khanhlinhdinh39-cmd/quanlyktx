@@ -1,47 +1,51 @@
-from flask import Flask, render_template, request, redirect, session
+from flask import Flask, render_template, request, redirect
 
 app = Flask(__name__)
-app.secret_key = 'khanhlinh_secret' # Khóa bảo mật cho session
 
-# Giả lập dữ liệu người dùng (Bạn có thể sửa lại cho khớp với users.txt)
-users = {
-    "admin1": {"password": "123", "role": "admin"},
-    "manager1": {"password": "123", "role": "manager"},
-    "sv001": {"password": "123", "role": "student"}
-}
+# Đọc user từ file
+def load_users():
+    users = {}
+    try:
+        with open("users.txt", "r") as f:
+            for line in f:
+                username, password = line.strip().split(",")
+                users[username] = password
+    except:
+        pass
+    return users
+
+# Lưu user
+def save_user(username, password):
+    with open("users.txt", "a") as f:
+        f.write(f"{username},{password}\n")
 
 @app.route("/")
-def index():
+def home():
     return render_template("index.html")
 
 @app.route("/login", methods=["GET", "POST"])
 def login():
     if request.method == "POST":
-        username = request.form.get("username")
-        password = request.form.get("password")
-        if username in users and users[username]["password"] == password:
-            session['user'] = username
-            role = users[username]["role"]
-            return redirect(f"/{role}")
-        return "Sai tài khoản hoặc mật khẩu!"
+        users = load_users()
+        username = request.form["username"]
+        password = request.form["password"]
+
+        if username in users and users[username] == password:
+            return "Đăng nhập thành công!"
+        else:
+            return "Sai tài khoản hoặc mật khẩu!"
     return render_template("login.html")
 
-@app.route("/admin")
-def admin():
-    return render_template("admin.html")
+@app.route("/register", methods=["GET", "POST"])
+def register():
+    if request.method == "POST":
+        username = request.form["username"]
+        password = request.form["password"]
 
-@app.route("/student")
-def student():
-    return render_template("student.html")
+        save_user(username, password)
+        return redirect("/login")
 
-@app.route("/manager")
-def manager():
-    return render_template("manager.html")
-
-@app.route("/logout")
-def logout():
-    session.pop('user', None)
-    return redirect("/")
+    return render_template("register.html")
 
 if __name__ == "__main__":
     app.run(debug=True)
